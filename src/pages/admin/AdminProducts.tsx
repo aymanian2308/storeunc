@@ -42,6 +42,7 @@ interface Product {
   price: number;
   category: string | null;
   image_url: string | null;
+  image_urls: string[] | null;
   material: string | null;
   in_stock: boolean;
   created_at: string;
@@ -52,7 +53,7 @@ interface ProductFormData {
   description: string;
   price: string;
   category: string;
-  image_url: string;
+  image_urls: string[];
   material: string;
   in_stock: boolean;
 }
@@ -62,7 +63,7 @@ const emptyForm: ProductFormData = {
   description: "",
   price: "",
   category: "",
-  image_url: "",
+  image_urls: [],
   material: "",
   in_stock: true,
 };
@@ -75,7 +76,6 @@ export default function AdminProducts() {
   const [formData, setFormData] = useState<ProductFormData>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -104,7 +104,6 @@ export default function AdminProducts() {
   const openCreateDialog = () => {
     setEditingProduct(null);
     setFormData(emptyForm);
-    setImagePreview(null);
     setDialogOpen(true);
   };
 
@@ -115,61 +114,69 @@ export default function AdminProducts() {
       description: product.description || "",
       price: product.price.toString(),
       category: product.category || "",
-      image_url: product.image_url || "",
+      image_urls: product.image_urls || (product.image_url ? [product.image_url] : []),
       material: product.material || "",
       in_stock: product.in_stock,
     });
-    setImagePreview(product.image_url || null);
     setDialogOpen(true);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image file.",
-        variant: "destructive",
-      });
-      return;
+    const validFiles: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not an image file.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: `${file.name} is larger than 5MB.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+      validFiles.push(file);
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (validFiles.length === 0) return;
 
     setUploading(true);
 
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `products/${fileName}`;
+      const uploadedUrls: string[] = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(filePath, file);
+      for (const file of validFiles) {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `products/${fileName}`;
 
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(filePath, file);
 
-      const { data: urlData } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(filePath);
+        if (uploadError) throw uploadError;
 
-      const publicUrl = urlData.publicUrl;
-      
-      setFormData({ ...formData, image_url: publicUrl });
-      setImagePreview(publicUrl);
+        const { data: urlData } = supabase.storage
+          .from("product-images")
+          .getPublicUrl(filePath);
+
+        uploadedUrls.push(urlData.publicUrl);
+      }
+
+      setFormData({ ...formData, image_urls: [...formData.image_urls, ...uploadedUrls] });
 
       toast({
-        title: "Image uploaded",
-        description: "The image has been uploaded successfully.",
+        title: "Images uploaded",
+        description: `${uploadedUrls.length} image(s) uploaded successfully.`,
       });
     } catch (error: any) {
       toast({
@@ -185,9 +192,11 @@ export default function AdminProducts() {
     }
   };
 
-  const removeImage = () => {
-    setFormData({ ...formData, image_url: "" });
-    setImagePreview(null);
+  const removeImage = (index: number) => {
+    setFormData({
+      ...formData,
+      image_urls: formData.image_urls.filter((_, i) => i !== index),
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -199,7 +208,8 @@ export default function AdminProducts() {
       description: formData.description.trim() || null,
       price: parseFloat(formData.price) || 0,
       category: formData.category.trim() || null,
-      image_url: formData.image_url.trim() || null,
+      image_urls: formData.image_urls,
+      image_url: formData.image_urls[0] || null, // Keep first image as primary for backwards compatibility
       material: formData.material.trim() || null,
       in_stock: formData.in_stock,
     };
@@ -284,23 +294,44 @@ export default function AdminProducts() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Product Image</Label>
+                  <Label>Product Images</Label>
                   <div className="border border-dashed border-border p-4">
-                    {imagePreview ? (
-                      <div className="relative">
-                        <img
-                          src={imagePreview}
-                          alt="Product preview"
-                          className="w-full h-48 object-cover"
-                        />
+                    {formData.image_urls.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          {formData.image_urls.map((url, index) => (
+                            <div key={index} className="relative aspect-square">
+                              <img
+                                src={url}
+                                alt={`Product image ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-1 right-1 h-6 w-6 rounded-none"
+                                onClick={() => removeImage(index)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                              {index === 0 && (
+                                <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-xs px-1">
+                                  Primary
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                         <Button
                           type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-2 right-2 h-8 w-8 rounded-none"
-                          onClick={removeImage}
+                          variant="outline"
+                          size="sm"
+                          className="w-full rounded-none"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
                         >
-                          <X className="h-4 w-4" />
+                          {uploading ? "Uploading..." : "Add More Images"}
                         </Button>
                       </div>
                     ) : (
@@ -316,10 +347,10 @@ export default function AdminProducts() {
                           <>
                             <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
                             <span className="text-sm text-muted-foreground">
-                              Click to upload image
+                              Click to upload images
                             </span>
                             <span className="text-xs text-muted-foreground mt-1">
-                              PNG, JPG up to 5MB
+                              PNG, JPG up to 5MB each (multiple allowed)
                             </span>
                           </>
                         )}
@@ -329,25 +360,11 @@ export default function AdminProducts() {
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handleImageUpload}
                       className="hidden"
                     />
                   </div>
-                  {!imagePreview && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">or</span>
-                      <Input
-                        type="url"
-                        value={formData.image_url}
-                        onChange={(e) => {
-                          setFormData({ ...formData, image_url: e.target.value });
-                          setImagePreview(e.target.value || null);
-                        }}
-                        placeholder="Paste image URL..."
-                        className="rounded-none text-sm"
-                      />
-                    </div>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -476,12 +493,19 @@ export default function AdminProducts() {
                 {products.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell>
-                      {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-12 h-12 object-cover"
-                        />
+                      {(product.image_urls && product.image_urls.length > 0) || product.image_url ? (
+                        <div className="relative w-12 h-12">
+                          <img
+                            src={product.image_urls?.[0] || product.image_url || ""}
+                            alt={product.name}
+                            className="w-12 h-12 object-cover"
+                          />
+                          {product.image_urls && product.image_urls.length > 1 && (
+                            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                              {product.image_urls.length}
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <div className="w-12 h-12 bg-muted flex items-center justify-center">
                           <ImageIcon className="h-4 w-4 text-muted-foreground" />
