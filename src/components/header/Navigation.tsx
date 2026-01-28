@@ -219,7 +219,7 @@ const Navigation = () => {
             </svg>
           </button>
           <Link 
-            to={user ? (isAdmin ? "/admin" : "/auth") : "/auth"}
+            to={user ? (isAdmin ? "/admin" : "/profile") : "/auth"}
             className="hidden lg:block p-2 text-nav-foreground hover:text-nav-hover transition-colors duration-200"
             aria-label={user ? "Account" : "Sign in"}
           >
