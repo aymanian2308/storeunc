@@ -26,7 +26,7 @@ const Category = () => {
           itemCount={24}
         />
         
-        <ProductGrid />
+        <ProductGrid category={category} />
       </main>
       
       <Footer />
