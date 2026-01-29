@@ -1,25 +1,21 @@
 import { useState, useRef } from "react";
 import ImageZoom from "./ImageZoom";
-import pantheonImage from "@/assets/pantheon.jpg";
-import eclipseImage from "@/assets/eclipse.jpg";
-import haloImage from "@/assets/halo.jpg";
-import organicEarring from "@/assets/organic-earring.png";
-import linkBracelet from "@/assets/link-bracelet.png";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const productImages = [
-  pantheonImage,
-  organicEarring,
-  eclipseImage,
-  linkBracelet,
-  haloImage,
-];
+interface ProductImageGalleryProps {
+  images: string[];
+  productName: string;
+  isLoading?: boolean;
+}
 
-const ProductImageGallery = () => {
+const ProductImageGallery = ({ images, productName, isLoading }: ProductImageGalleryProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [zoomInitialIndex, setZoomInitialIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+
+  const productImages = images.length > 0 ? images : ["/placeholder.svg"];
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % productImages.length);
@@ -50,10 +46,8 @@ const ProductImageGallery = () => {
 
     if (Math.abs(difference) > minSwipeDistance) {
       if (difference > 0) {
-        // Swipe left - next image
         nextImage();
       } else {
-        // Swipe right - previous image
         prevImage();
       }
     }
@@ -61,6 +55,21 @@ const ProductImageGallery = () => {
     touchStartX.current = null;
     touchEndX.current = null;
   };
+
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        <div className="hidden lg:block space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="w-full aspect-square" />
+          ))}
+        </div>
+        <div className="lg:hidden">
+          <Skeleton className="w-full aspect-square" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -75,7 +84,7 @@ const ProductImageGallery = () => {
             >
               <img
                 src={image}
-                alt={`Product view ${index + 1}`}
+                alt={`${productName} view ${index + 1}`}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
             </div>
@@ -95,23 +104,25 @@ const ProductImageGallery = () => {
           >
             <img
               src={productImages[currentImageIndex]}
-              alt={`Product view ${currentImageIndex + 1}`}
+              alt={`${productName} view ${currentImageIndex + 1}`}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none"
             />
           </div>
           
           {/* Dots indicator */}
-          <div className="flex justify-center mt-4 gap-2">
-            {productImages.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentImageIndex(index)}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentImageIndex ? 'bg-foreground' : 'bg-muted'
-                }`}
-              />
-            ))}
-          </div>
+          {productImages.length > 1 && (
+            <div className="flex justify-center mt-4 gap-2">
+              {productImages.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    index === currentImageIndex ? 'bg-foreground' : 'bg-muted'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
