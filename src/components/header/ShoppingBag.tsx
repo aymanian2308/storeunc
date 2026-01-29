@@ -1,31 +1,18 @@
 import { X, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-
-interface CartItem {
-  id: number;
-  name: string;
-  price: string;
-  image: string;
-  quantity: number;
-  category: string;
-}
+import { useCart } from "@/contexts/CartContext";
 
 interface ShoppingBagProps {
   isOpen: boolean;
   onClose: () => void;
-  cartItems: CartItem[];
-  updateQuantity: (id: number, newQuantity: number) => void;
   onViewFavorites?: () => void;
 }
 
-const ShoppingBag = ({ isOpen, onClose, cartItems, updateQuantity, onViewFavorites }: ShoppingBagProps) => {
-  if (!isOpen) return null;
+const ShoppingBag = ({ isOpen, onClose, onViewFavorites }: ShoppingBagProps) => {
+  const { items, updateQuantity, subtotal } = useCart();
 
-  const subtotal = cartItems.reduce((sum, item) => {
-    const price = parseFloat(item.price.replace('€', '').replace(',', ''));
-    return sum + (price * item.quantity);
-  }, 0);
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 h-screen">
@@ -66,7 +53,7 @@ const ShoppingBag = ({ isOpen, onClose, cartItems, updateQuantity, onViewFavorit
             </div>
           )}
           
-          {cartItems.length === 0 ? (
+          {items.length === 0 ? (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-muted-foreground text-sm text-center">
                 Your shopping bag is empty.<br />
@@ -77,7 +64,7 @@ const ShoppingBag = ({ isOpen, onClose, cartItems, updateQuantity, onViewFavorit
             <>
               {/* Cart items */}
               <div className="flex-1 overflow-y-auto space-y-6 mb-6">
-                {cartItems.map((item) => (
+                {items.map((item) => (
                   <div key={item.id} className="flex gap-4">
                     <div className="w-20 h-20 bg-muted/10 rounded-lg overflow-hidden">
                       <img 
@@ -92,7 +79,7 @@ const ShoppingBag = ({ isOpen, onClose, cartItems, updateQuantity, onViewFavorit
                           <p className="text-sm font-light text-muted-foreground">{item.category}</p>
                           <h3 className="text-sm font-medium text-foreground">{item.name}</h3>
                         </div>
-                        <p className="text-sm font-light text-foreground">{item.price}</p>
+                        <p className="text-sm font-light text-foreground">€{item.price.toLocaleString()}</p>
                       </div>
                       <div className="flex items-center gap-2 mt-3">
                         <div className="flex items-center border border-border">

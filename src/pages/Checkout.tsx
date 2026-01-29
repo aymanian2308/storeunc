@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Minus, Plus, CreditCard, Check } from "lucide-react";
+import { Link } from "react-router-dom";
 import CheckoutHeader from "../components/header/CheckoutHeader";
 import Footer from "../components/footer/Footer";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import pantheonImage from "@/assets/pantheon.jpg";
-import eclipseImage from "@/assets/eclipse.jpg";
+import { useCart } from "@/contexts/CartContext";
 
 const Checkout = () => {
+  const { items: cartItems, updateQuantity, subtotal, clearCart } = useCart();
+  
   const [showDiscountInput, setShowDiscountInput] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
   const [customerDetails, setCustomerDetails] = useState({
@@ -45,42 +47,6 @@ const Checkout = () => {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
-  
-  // Mock cart data - in a real app this would come from state management
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Pantheon Ring",
-      price: "€2,450",
-      quantity: 1,
-      image: pantheonImage,
-      size: "54 EU / 7 US"
-    },
-    {
-      id: 2,
-      name: "Eclipse Earrings", 
-      price: "€1,850",
-      quantity: 1,
-      image: eclipseImage
-    }
-  ]);
-
-  const updateQuantity = (id: number, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      setCartItems(items => items.filter(item => item.id !== id));
-    } else {
-      setCartItems(items => 
-        items.map(item => 
-          item.id === id ? { ...item, quantity: newQuantity } : item
-        )
-      );
-    }
-  };
-
-  const subtotal = cartItems.reduce((sum, item) => {
-    const price = parseFloat(item.price.replace('€', '').replace(',', ''));
-    return sum + (price * item.quantity);
-  }, 0);
 
   const getShippingCost = () => {
     switch (shippingOption) {
@@ -128,6 +94,25 @@ const Checkout = () => {
     setPaymentComplete(true);
   };
 
+  // Show empty cart message if no items
+  if (cartItems.length === 0 && !paymentComplete) {
+    return (
+      <div className="min-h-screen bg-background">
+        <CheckoutHeader />
+        <main className="pt-6 pb-12">
+          <div className="max-w-7xl mx-auto px-6 text-center py-16">
+            <h1 className="text-2xl font-light text-foreground mb-4">Your bag is empty</h1>
+            <p className="text-muted-foreground mb-8">Add some items to your bag to proceed to checkout.</p>
+            <Button asChild className="rounded-none">
+              <Link to="/category/shop">Continue Shopping</Link>
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <CheckoutHeader />
@@ -153,8 +138,8 @@ const Checkout = () => {
                       </div>
                       <div className="flex-1">
                         <h3 className="font-light text-foreground">{item.name}</h3>
-                        {item.size && (
-                          <p className="text-sm text-muted-foreground">Size: {item.size}</p>
+                        {item.category && (
+                          <p className="text-sm text-muted-foreground">{item.category}</p>
                         )}
                         
                         {/* Quantity controls */}
@@ -181,7 +166,7 @@ const Checkout = () => {
                         </div>
                       </div>
                       <div className="text-foreground font-medium">
-                        {item.price}
+                        €{item.price.toLocaleString()}
                       </div>
                     </div>
                   ))}
