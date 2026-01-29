@@ -11,6 +11,8 @@ import {
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
 import { Minus, Plus } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/hooks/use-toast";
 import type { Product } from "@/hooks/useProduct";
 
 interface ProductInfoProps {
@@ -20,6 +22,8 @@ interface ProductInfoProps {
 
 const ProductInfo = ({ product, isLoading }: ProductInfoProps) => {
   const [quantity, setQuantity] = useState(1);
+  const { addItem } = useCart();
+  const { toast } = useToast();
 
   const incrementQuantity = () => setQuantity(prev => prev + 1);
   const decrementQuantity = () => setQuantity(prev => Math.max(1, prev - 1));
@@ -138,6 +142,14 @@ const ProductInfo = ({ product, isLoading }: ProductInfoProps) => {
         <Button 
           className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 font-light rounded-none"
           disabled={!product.in_stock}
+          onClick={() => {
+            addItem(product, quantity);
+            setQuantity(1);
+            toast({
+              title: "Added to bag",
+              description: `${quantity} × ${product.name} added to your shopping bag.`,
+            });
+          }}
         >
           {product.in_stock ? "Add to Bag" : "Out of Stock"}
         </Button>
