@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Minus, Plus, CreditCard, Check } from "lucide-react";
+import { Minus, Plus, CreditCard, Check, Truck, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import CheckoutHeader from "../components/header/CheckoutHeader";
 import Footer from "../components/footer/Footer";
@@ -39,6 +39,7 @@ const Checkout = () => {
     country: ""
   });
   const [shippingOption, setShippingOption] = useState("standard");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "cod">("card");
   const [paymentDetails, setPaymentDetails] = useState({
     cardNumber: "",
     expiryDate: "",
@@ -47,6 +48,9 @@ const Checkout = () => {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
+
+  // Cash on Delivery fee
+  const codFee = paymentMethod === "cod" ? 5 : 0;
 
   const getShippingCost = () => {
     switch (shippingOption) {
@@ -60,7 +64,7 @@ const Checkout = () => {
   };
   
   const shipping = getShippingCost();
-  const total = subtotal + shipping;
+  const total = subtotal + shipping + codFee;
 
   const handleDiscountSubmit = () => {
     // Handle discount code submission
@@ -529,87 +533,168 @@ const Checkout = () => {
 
             {/* Payment Section */}
             <div className="bg-muted/20 p-8 rounded-none">
-              <h2 className="text-lg font-light text-foreground mb-6">Payment Details</h2>
+              <h2 className="text-lg font-light text-foreground mb-6">Payment Method</h2>
               
               {!paymentComplete ? (
                 <div className="space-y-6">
-                  <div>
-                    <Label htmlFor="cardholderName" className="text-sm font-light text-foreground">
-                      Cardholder Name *
-                    </Label>
-                    <Input
-                      id="cardholderName"
-                      type="text"
-                      value={paymentDetails.cardholderName}
-                      onChange={(e) => handlePaymentDetailsChange("cardholderName", e.target.value)}
-                      className="mt-2 rounded-none"
-                      placeholder="Name on card"
-                    />
-                  </div>
+                  {/* Payment Method Selection */}
+                  <RadioGroup 
+                    value={paymentMethod} 
+                    onValueChange={(value) => setPaymentMethod(value as "card" | "paypal" | "cod")}
+                    className="space-y-4"
+                  >
+                    <div className={`flex items-center justify-between p-4 border rounded-none cursor-pointer transition-colors ${
+                      paymentMethod === "card" ? "border-foreground bg-muted/30" : "border-muted-foreground/20"
+                    }`}>
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="card" id="card" />
+                        <Label htmlFor="card" className="font-light text-foreground cursor-pointer flex items-center gap-2">
+                          <CreditCard className="h-4 w-4" />
+                          Credit / Debit Card
+                        </Label>
+                      </div>
+                      <div className="flex gap-2">
+                        <img src="https://img.icons8.com/color/48/visa.png" alt="Visa" className="h-6" />
+                        <img src="https://img.icons8.com/color/48/mastercard.png" alt="Mastercard" className="h-6" />
+                      </div>
+                    </div>
 
-                  <div>
-                    <Label htmlFor="cardNumber" className="text-sm font-light text-foreground">
-                      Card Number *
-                    </Label>
-                    <div className="relative mt-2">
-                      <Input
-                        id="cardNumber"
-                        type="text"
-                        value={paymentDetails.cardNumber}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
-                          if (value.length <= 19) {
-                            handlePaymentDetailsChange("cardNumber", value);
-                          }
-                        }}
-                        className="rounded-none pl-10"
-                        placeholder="4242 4242 4242 4242"
-                        maxLength={19}
-                      />
-                      <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <div className={`flex items-center justify-between p-4 border rounded-none cursor-pointer transition-colors ${
+                      paymentMethod === "paypal" ? "border-foreground bg-muted/30" : "border-muted-foreground/20"
+                    }`}>
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="paypal" id="paypal" />
+                        <Label htmlFor="paypal" className="font-light text-foreground cursor-pointer flex items-center gap-2">
+                          <Wallet className="h-4 w-4" />
+                          PayPal
+                        </Label>
+                      </div>
+                      <img src="https://img.icons8.com/color/48/paypal.png" alt="PayPal" className="h-6" />
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="expiryDate" className="text-sm font-light text-foreground">
-                        Expiry Date *
-                      </Label>
-                      <Input
-                        id="expiryDate"
-                        type="text"
-                        value={paymentDetails.expiryDate}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').replace(/(\d{2})(\d{2})/, '$1/$2');
-                          if (value.length <= 5) {
-                            handlePaymentDetailsChange("expiryDate", value);
-                          }
-                        }}
-                        className="mt-2 rounded-none"
-                        placeholder="MM/YY"
-                        maxLength={5}
-                      />
+                    <div className={`flex items-center justify-between p-4 border rounded-none cursor-pointer transition-colors ${
+                      paymentMethod === "cod" ? "border-foreground bg-muted/30" : "border-muted-foreground/20"
+                    }`}>
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="cod" id="cod" />
+                        <Label htmlFor="cod" className="font-light text-foreground cursor-pointer flex items-center gap-2">
+                          <Truck className="h-4 w-4" />
+                          Cash on Delivery
+                        </Label>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        +€5 fee
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="cvv" className="text-sm font-light text-foreground">
-                        CVV *
-                      </Label>
-                      <Input
-                        id="cvv"
-                        type="text"
-                        value={paymentDetails.cvv}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          if (value.length <= 3) {
-                            handlePaymentDetailsChange("cvv", value);
-                          }
-                        }}
-                        className="mt-2 rounded-none"
-                        placeholder="123"
-                        maxLength={3}
-                      />
+                  </RadioGroup>
+
+                  {/* Card Payment Details */}
+                  {paymentMethod === "card" && (
+                    <div className="space-y-6 pt-4 border-t border-muted-foreground/20">
+                      <div>
+                        <Label htmlFor="cardholderName" className="text-sm font-light text-foreground">
+                          Cardholder Name *
+                        </Label>
+                        <Input
+                          id="cardholderName"
+                          type="text"
+                          value={paymentDetails.cardholderName}
+                          onChange={(e) => handlePaymentDetailsChange("cardholderName", e.target.value)}
+                          className="mt-2 rounded-none"
+                          placeholder="Name on card"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="cardNumber" className="text-sm font-light text-foreground">
+                          Card Number *
+                        </Label>
+                        <div className="relative mt-2">
+                          <Input
+                            id="cardNumber"
+                            type="text"
+                            value={paymentDetails.cardNumber}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
+                              if (value.length <= 19) {
+                                handlePaymentDetailsChange("cardNumber", value);
+                              }
+                            }}
+                            className="rounded-none pl-10"
+                            placeholder="4242 4242 4242 4242"
+                            maxLength={19}
+                          />
+                          <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="expiryDate" className="text-sm font-light text-foreground">
+                            Expiry Date *
+                          </Label>
+                          <Input
+                            id="expiryDate"
+                            type="text"
+                            value={paymentDetails.expiryDate}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '').replace(/(\d{2})(\d{2})/, '$1/$2');
+                              if (value.length <= 5) {
+                                handlePaymentDetailsChange("expiryDate", value);
+                              }
+                            }}
+                            className="mt-2 rounded-none"
+                            placeholder="MM/YY"
+                            maxLength={5}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="cvv" className="text-sm font-light text-foreground">
+                            CVV *
+                          </Label>
+                          <Input
+                            id="cvv"
+                            type="text"
+                            value={paymentDetails.cvv}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              if (value.length <= 3) {
+                                handlePaymentDetailsChange("cvv", value);
+                              }
+                            }}
+                            className="mt-2 rounded-none"
+                            placeholder="123"
+                            maxLength={3}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* PayPal Message */}
+                  {paymentMethod === "paypal" && (
+                    <div className="pt-4 border-t border-muted-foreground/20">
+                      <div className="bg-blue-50 p-4 rounded-none text-center">
+                        <p className="text-sm text-blue-800">
+                          You will be redirected to PayPal to complete your payment securely.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cash on Delivery Message */}
+                  {paymentMethod === "cod" && (
+                    <div className="pt-4 border-t border-muted-foreground/20">
+                      <div className="bg-amber-50 p-4 rounded-none">
+                        <p className="text-sm text-amber-800 mb-2">
+                          <strong>Cash on Delivery</strong>
+                        </p>
+                        <p className="text-sm text-amber-700">
+                          Pay in cash when your order arrives. A €5 handling fee applies. Please have the exact amount ready for the delivery driver.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Order Total Summary */}
                   <div className="bg-muted/10 p-6 rounded-none border border-muted-foreground/20 space-y-3">
@@ -623,6 +708,12 @@ const Checkout = () => {
                         {shipping === 0 ? "Free" : `€${shipping}`}
                       </span>
                     </div>
+                    {codFee > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">COD Fee</span>
+                        <span className="text-foreground">€{codFee}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-lg font-medium border-t border-muted-foreground/20 pt-3">
                       <span className="text-foreground">Total</span>
                       <span className="text-foreground">€{total.toLocaleString()}</span>
@@ -631,10 +722,14 @@ const Checkout = () => {
 
                   <Button
                     onClick={handleCompleteOrder}
-                    disabled={isProcessing || !paymentDetails.cardNumber || !paymentDetails.expiryDate || !paymentDetails.cvv || !paymentDetails.cardholderName}
+                    disabled={isProcessing || (paymentMethod === "card" && (!paymentDetails.cardNumber || !paymentDetails.expiryDate || !paymentDetails.cvv || !paymentDetails.cardholderName))}
                     className="w-full rounded-none h-12 text-base"
                   >
-                    {isProcessing ? "Processing..." : `Complete Order • €${total.toLocaleString()}`}
+                    {isProcessing ? "Processing..." : 
+                      paymentMethod === "paypal" ? `Pay with PayPal • €${total.toLocaleString()}` :
+                      paymentMethod === "cod" ? `Place Order (COD) • €${total.toLocaleString()}` :
+                      `Complete Order • €${total.toLocaleString()}`
+                    }
                   </Button>
                 </div>
               ) : (
@@ -643,7 +738,12 @@ const Checkout = () => {
                     <Check className="h-8 w-8 text-green-600" />
                   </div>
                   <h3 className="text-xl font-light text-foreground mb-2">Order Complete!</h3>
-                  <p className="text-muted-foreground">Thank you for your purchase. Your order confirmation has been sent to your email.</p>
+                  <p className="text-muted-foreground">
+                    {paymentMethod === "cod" 
+                      ? "Thank you for your order. Please have €" + total.toLocaleString() + " ready when the delivery arrives."
+                      : "Thank you for your purchase. Your order confirmation has been sent to your email."
+                    }
+                  </p>
                  </div>
                )}
              </div>
