@@ -33,7 +33,12 @@ export const useProducts = ({
         .from("products")
         .select("*", { count: "exact", head: true });
 
-      if (category && category.toLowerCase() !== "all products") {
+      const skipCategoryFilter = !category || 
+        category.toLowerCase() === "all products" || 
+        category.toLowerCase() === "shop" ||
+        category.toLowerCase() === "new-in";
+
+      if (!skipCategoryFilter) {
         countQuery = countQuery.ilike("category", category);
       }
 
@@ -46,7 +51,7 @@ export const useProducts = ({
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (category && category.toLowerCase() !== "all products") {
+      if (!skipCategoryFilter) {
         query = query.ilike("category", category);
       }
 
