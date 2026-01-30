@@ -1,13 +1,15 @@
 import { ArrowRight, X, User } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import { useCategories } from "@/hooks/useCategories";
 import ShoppingBag from "./ShoppingBag";
 
 const Navigation = () => {
   const { user, isAdmin } = useAuth();
   const { totalItems } = useCart();
+  const { data: categories = [] } = useCategories();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [offCanvasType, setOffCanvasType] = useState<'favorites' | null>(null);
@@ -16,19 +18,16 @@ const Navigation = () => {
   
   // Preload dropdown images for faster display
   useEffect(() => {
-    const imagesToPreload = [
-      "/rings-collection.png",
-      "/earrings-collection.png", 
-      "/arcus-bracelet.png",
-      "/span-bracelet.png",
-      "/founders.png"
-    ];
+    const imagesToPreload = categories
+      .filter(cat => cat.image)
+      .map(cat => cat.image as string)
+      .slice(0, 4);
     
     imagesToPreload.forEach(src => {
       const img = new Image();
       img.src = src;
     });
-  }, []);
+  }, [categories]);
 
   const popularSearches = [
     "Gold Rings",
@@ -39,52 +38,60 @@ const Navigation = () => {
     "Vintage Collection"
   ];
   
-  const navItems = [
-    { 
-      name: "Shop", 
-      href: "/category/shop",
-      submenuItems: [
-        "Rings",
-        "Necklaces", 
-        "Earrings",
-        "Bracelets",
-        "Watches"
-      ],
-      images: [
-        { src: "/rings-collection.png", alt: "Rings Collection", label: "Rings" },
-        { src: "/earrings-collection.png", alt: "Earrings Collection", label: "Earrings" }
-      ]
-    },
-    { 
-      name: "New in", 
-      href: "/category/new-in",
-      submenuItems: [
-        "This Week's Arrivals",
-        "Spring Collection",
-        "Featured Designers",
-        "Limited Edition",
-        "Pre-Orders"
-      ],
-      images: [
-        { src: "/arcus-bracelet.png", alt: "Arcus Bracelet", label: "Arcus Bracelet" },
-        { src: "/span-bracelet.png", alt: "Span Bracelet", label: "Span Bracelet" }
-      ]
-    },
-    { 
-      name: "About", 
-      href: "/about/our-story",
-      submenuItems: [
-        "Our Story",
-        "Sustainability",
-        "Size Guide",
-        "Customer Care",
-        "Store Locator"
-      ],
-      images: [
-        { src: "/founders.png", alt: "Company Founders", label: "Read our story" }
-      ]
-    }
-  ];
+  // Build dynamic nav items based on categories from database
+  const navItems = useMemo(() => {
+    const shopSubmenuItems = categories.map(cat => cat.name);
+    const shopImages = categories
+      .filter(cat => cat.image)
+      .slice(0, 2)
+      .map(cat => ({
+        src: cat.image as string,
+        alt: `${cat.name} Collection`,
+        label: cat.name,
+      }));
+
+    return [
+      { 
+        name: "Shop", 
+        href: "/category/shop",
+        submenuItems: shopSubmenuItems.length > 0 ? shopSubmenuItems : ["All Products"],
+        images: shopImages.length > 0 ? shopImages : []
+      },
+      { 
+        name: "New in", 
+        href: "/category/new-in",
+        submenuItems: [
+          "This Week's Arrivals",
+          "Spring Collection",
+          "Featured Designers",
+          "Limited Edition",
+          "Pre-Orders"
+        ],
+        images: categories
+          .filter(cat => cat.image)
+          .slice(2, 4)
+          .map(cat => ({
+            src: cat.image as string,
+            alt: cat.name,
+            label: cat.name,
+          }))
+      },
+      { 
+        name: "About", 
+        href: "/about/our-story",
+        submenuItems: [
+          "Our Story",
+          "Sustainability",
+          "Size Guide",
+          "Customer Care",
+          "Store Locator"
+        ],
+        images: [
+          { src: "/founders.png", alt: "Company Founders", label: "Read our story" }
+        ]
+      }
+    ];
+  }, [categories]);
 
   return (
     <nav 
@@ -222,12 +229,8 @@ const Navigation = () => {
                   ?.images.map((image, index) => {
                     // Determine the link destination based on dropdown and image
                     let linkTo = "/";
-                    if (activeDropdown === "Shop") {
-                      if (image.label === "Rings") linkTo = "/category/rings";
-                      else if (image.label === "Earrings") linkTo = "/category/earrings";
-                    } else if (activeDropdown === "New in") {
-                      if (image.label === "Arcus Bracelet") linkTo = "/product/arcus-bracelet";
-                      else if (image.label === "Span Bracelet") linkTo = "/product/span-bracelet";
+                    if (activeDropdown === "Shop" || activeDropdown === "New in") {
+                      linkTo = `/category/${image.label.toLowerCase().replace(/\s+/g, '-')}`;
                     } else if (activeDropdown === "About") {
                       linkTo = "/about/our-story";
                     }
@@ -239,12 +242,10 @@ const Navigation = () => {
                           alt={image.alt}
                           className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-90"
                         />
-                        {(activeDropdown === "Shop" || activeDropdown === "New in" || activeDropdown === "About") && (
-                          <div className="absolute bottom-2 left-2 text-white text-xs font-light flex items-center gap-1">
-                            <span>{image.label}</span>
-                            <ArrowRight size={12} />
-                          </div>
-                        )}
+                        <div className="absolute bottom-2 left-2 text-white text-xs font-light flex items-center gap-1">
+                          <span>{image.label}</span>
+                          <ArrowRight size={12} />
+                        </div>
                       </Link>
                     );
                   })}
