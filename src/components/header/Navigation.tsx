@@ -30,12 +30,12 @@ const Navigation = () => {
   }, [categories]);
 
   const popularSearches = [
-    "Gold Rings",
-    "Silver Necklaces", 
-    "Pearl Earrings",
-    "Designer Bracelets",
-    "Wedding Rings",
-    "Vintage Collection"
+    "iPhone 15 Pro",
+    "Samsung Galaxy", 
+    "Leather Cases",
+    "MagSafe Charger",
+    "Screen Protector",
+    "Wireless Earbuds"
   ];
   
   // Build dynamic nav items based on categories from database
@@ -61,9 +61,9 @@ const Navigation = () => {
         name: "New in", 
         href: "/category/new-in",
         submenuItems: [
-          "This Week's Arrivals",
-          "Spring Collection",
-          "Featured Designers",
+          "Latest Phones",
+          "New Cases",
+          "Trending Accessories",
           "Limited Edition",
           "Pre-Orders"
         ],
@@ -87,7 +87,7 @@ const Navigation = () => {
           "Store Locator"
         ],
         images: [
-          { src: "/founders.png", alt: "Company Founders", label: "Read our story" }
+          { src: "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=800&q=80", alt: "About TechCase", label: "Read our story" }
         ]
       }
     ];
@@ -143,11 +143,7 @@ const Navigation = () => {
         {/* Center logo */}
         <div className="absolute left-1/2 transform -translate-x-1/2">
           <Link to="/" className="block">
-            <img 
-              src="/LINEA-1.svg" 
-              alt="LINEA" 
-              className="h-6 w-auto"
-            />
+            <span className="text-xl font-semibold tracking-tight text-foreground">TechCase</span>
           </Link>
         </div>
 
@@ -270,7 +266,7 @@ const Navigation = () => {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search for jewelry..."
+                    placeholder="Search for phones, cases, accessories..."
                     className="flex-1 bg-transparent text-nav-foreground placeholder:text-nav-foreground/60 outline-none text-lg"
                     autoFocus
                   />
