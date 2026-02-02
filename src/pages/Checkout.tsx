@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Minus, Plus, CreditCard, Check, Truck, Wallet } from "lucide-react";
+import { Minus, Plus, Check, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import CheckoutHeader from "../components/header/CheckoutHeader";
 import Footer from "../components/footer/Footer";
@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
+
+const FORMSPREE_URL = "https://formspree.io/f/xlgndygr";
 
 const Checkout = () => {
   const { items: cartItems, updateQuantity, subtotal, clearCart } = useCart();
@@ -39,18 +42,11 @@ const Checkout = () => {
     country: ""
   });
   const [shippingOption, setShippingOption] = useState("standard");
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "cod">("card");
-  const [paymentDetails, setPaymentDetails] = useState({
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-    cardholderName: ""
-  });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentComplete, setPaymentComplete] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
 
   // Cash on Delivery fee
-  const codFee = paymentMethod === "cod" ? 5 : 0;
+  const codFee = 5;
 
   const getShippingCost = () => {
     switch (shippingOption) {
@@ -59,7 +55,7 @@ const Checkout = () => {
       case "overnight":
         return 35;
       default:
-        return 0; // Standard shipping is free
+        return 0;
     }
   };
   
@@ -67,7 +63,6 @@ const Checkout = () => {
   const total = subtotal + shipping + codFee;
 
   const handleDiscountSubmit = () => {
-    // Handle discount code submission
     console.log("Discount code submitted:", discountCode);
     setShowDiscountInput(false);
   };
@@ -84,27 +79,113 @@ const Checkout = () => {
     setBillingDetails(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePaymentDetailsChange = (field: string, value: string) => {
-    setPaymentDetails(prev => ({ ...prev, [field]: value }));
+  const validateForm = () => {
+    if (!customerDetails.email || !customerDetails.firstName || !customerDetails.lastName) {
+      toast.error("Please fill in all required customer details");
+      return false;
+    }
+    if (!shippingAddress.address || !shippingAddress.city || !shippingAddress.postalCode || !shippingAddress.country) {
+      toast.error("Please fill in all required shipping details");
+      return false;
+    }
+    if (hasSeparateBilling) {
+      if (!billingDetails.email || !billingDetails.firstName || !billingDetails.lastName ||
+          !billingDetails.address || !billingDetails.city || !billingDetails.postalCode || !billingDetails.country) {
+        toast.error("Please fill in all required billing details");
+        return false;
+      }
+    }
+    return true;
   };
 
-  const handleCompleteOrder = async () => {
+  const handlePlaceOrder = async () => {
+    if (!validateForm()) return;
+    
     setIsProcessing(true);
-    
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsProcessing(false);
-    setPaymentComplete(true);
+
+    // Prepare order data for Formspree
+    const orderData = {
+      // Customer Details
+      customer_email: customerDetails.email.trim(),
+      customer_name: `${customerDetails.firstName.trim()} ${customerDetails.lastName.trim()}`,
+      customer_phone: customerDetails.phone.trim(),
+      
+      // Shipping Address
+      shipping_address: shippingAddress.address.trim(),
+      shipping_city: shippingAddress.city.trim(),
+      shipping_postal_code: shippingAddress.postalCode.trim(),
+      shipping_country: shippingAddress.country.trim(),
+      
+      // Billing Details (if separate)
+      billing_same_as_shipping: !hasSeparateBilling,
+      ...(hasSeparateBilling && {
+        billing_email: billingDetails.email.trim(),
+        billing_name: `${billingDetails.firstName.trim()} ${billingDetails.lastName.trim()}`,
+        billing_phone: billingDetails.phone.trim(),
+        billing_address: billingDetails.address.trim(),
+        billing_city: billingDetails.city.trim(),
+        billing_postal_code: billingDetails.postalCode.trim(),
+        billing_country: billingDetails.country.trim(),
+      }),
+      
+      // Order Details
+      shipping_option: shippingOption,
+      shipping_cost: shipping,
+      cod_fee: codFee,
+      subtotal: subtotal,
+      total: total,
+      payment_method: "Cash on Delivery",
+      
+      // Products
+      products: cartItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        category: item.category || "N/A"
+      })),
+      products_summary: cartItems.map(item => 
+        `${item.name} x${item.quantity} - €${(item.price * item.quantity).toLocaleString()}`
+      ).join(" | "),
+      
+      // Discount
+      discount_code: discountCode || "None",
+      
+      // Timestamp
+      order_date: new Date().toISOString(),
+    };
+
+    try {
+      const response = await fetch(FORMSPREE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      if (response.ok) {
+        setOrderComplete(true);
+        clearCart();
+        toast.success("Order placed successfully!");
+      } else {
+        throw new Error("Failed to submit order");
+      }
+    } catch (error) {
+      console.error("Order submission error:", error);
+      toast.error("Failed to place order. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Show empty cart message if no items
-  if (cartItems.length === 0 && !paymentComplete) {
+  if (cartItems.length === 0 && !orderComplete) {
     return (
       <div className="min-h-screen bg-background">
         <CheckoutHeader />
         <main className="pt-6 pb-12">
-          <div className="max-w-7xl mx-auto px-6 text-center py-16">
+          <div className="container mx-auto px-6 text-center py-16">
             <h1 className="text-2xl font-light text-foreground mb-4">Your bag is empty</h1>
             <p className="text-muted-foreground mb-8">Add some items to your bag to proceed to checkout.</p>
             <Button asChild className="rounded-none">
@@ -122,18 +203,18 @@ const Checkout = () => {
       <CheckoutHeader />
       
       <main className="pt-6 pb-12">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="container mx-auto px-6 lg:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            {/* Order Summary - First on mobile, last on desktop */}
+            {/* Order Summary */}
             <div className="lg:col-span-1 lg:order-2">
-              <div className="bg-muted/20 p-8 rounded-none sticky top-6">
+              <div className="bg-card p-8 border border-border sticky top-6">
                 <h2 className="text-lg font-light text-foreground mb-6">Order Summary</h2>
                 
                 <div className="space-y-6">
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex gap-4">
-                      <div className="w-20 h-20 bg-muted rounded-none overflow-hidden">
+                      <div className="w-20 h-20 bg-muted overflow-hidden">
                         <img 
                           src={item.image} 
                           alt={item.name}
@@ -146,13 +227,12 @@ const Checkout = () => {
                           <p className="text-sm text-muted-foreground">{item.category}</p>
                         )}
                         
-                        {/* Quantity controls */}
                         <div className="flex items-center gap-2 mt-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="h-8 w-8 p-0 rounded-none border-muted-foreground/20"
+                            className="h-8 w-8 p-0 rounded-none border-border"
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
@@ -163,7 +243,7 @@ const Checkout = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="h-8 w-8 p-0 rounded-none border-muted-foreground/20"
+                            className="h-8 w-8 p-0 rounded-none border-border"
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
@@ -176,57 +256,66 @@ const Checkout = () => {
                   ))}
                 </div>
 
-                {/* Discount Code Section */}
-                <div className="mt-8 pt-6 border-t border-muted-foreground/20">
+                {/* Discount Code */}
+                <div className="mt-8 pt-6 border-t border-border">
                   {!showDiscountInput ? (
                     <button 
                       onClick={() => setShowDiscountInput(true)}
-                      className="text-sm text-foreground underline hover:no-underline transition-all"
+                      className="text-sm text-primary hover:text-primary-hover transition-colors"
                     >
-                      Discount code
+                      Have a discount code?
                     </button>
                   ) : (
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <Input
-                          type="text"
-                          value={discountCode}
-                          onChange={(e) => setDiscountCode(e.target.value)}
-                          placeholder="Enter discount code"
-                          className="flex-1 rounded-none"
-                        />
-                        <button 
-                          onClick={handleDiscountSubmit}
-                          className="text-sm text-foreground underline hover:no-underline transition-all px-2"
-                        >
-                          Apply
-                        </button>
-                      </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value)}
+                        placeholder="Enter code"
+                        className="flex-1 rounded-none"
+                      />
+                      <Button 
+                        onClick={handleDiscountSubmit}
+                        variant="outline"
+                        className="rounded-none"
+                      >
+                        Apply
+                      </Button>
                     </div>
                   )}
                 </div>
 
-                <div className="border-t border-muted-foreground/20 mt-4 pt-6">
+                <div className="border-t border-border mt-4 pt-6 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="text-foreground">€{subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Shipping</span>
+                    <span className="text-foreground">{shipping === 0 ? "Free" : `€${shipping}`}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">COD Fee</span>
+                    <span className="text-foreground">€{codFee}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-medium border-t border-border pt-3">
+                    <span className="text-foreground">Total</span>
+                    <span className="text-primary">€{total.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Left Column - Forms */}
+            {/* Forms */}
             <div className="lg:col-span-2 lg:order-1 space-y-8">
 
-              {/* Customer Details Form */}
-              <div className="bg-muted/20 p-8 rounded-none">
+              {/* Customer Details */}
+              <div className="bg-card p-8 border border-border">
                 <h2 className="text-lg font-light text-foreground mb-6">Customer Details</h2>
                 
                 <div className="space-y-6">
                   <div>
-                    <Label htmlFor="email" className="text-sm font-light text-foreground">
-                      Email Address *
-                    </Label>
+                    <Label htmlFor="email" className="text-sm text-foreground">Email Address *</Label>
                     <Input
                       id="email"
                       type="email"
@@ -239,9 +328,7 @@ const Checkout = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="firstName" className="text-sm font-light text-foreground">
-                        First Name *
-                      </Label>
+                      <Label htmlFor="firstName" className="text-sm text-foreground">First Name *</Label>
                       <Input
                         id="firstName"
                         type="text"
@@ -252,9 +339,7 @@ const Checkout = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="lastName" className="text-sm font-light text-foreground">
-                        Last Name *
-                      </Label>
+                      <Label htmlFor="lastName" className="text-sm text-foreground">Last Name *</Label>
                       <Input
                         id="lastName"
                         type="text"
@@ -267,28 +352,24 @@ const Checkout = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="phone" className="text-sm font-light text-foreground">
-                      Phone Number
-                    </Label>
+                    <Label htmlFor="phone" className="text-sm text-foreground">Phone Number</Label>
                     <Input
                       id="phone"
                       type="tel"
                       value={customerDetails.phone}
                       onChange={(e) => handleCustomerDetailsChange("phone", e.target.value)}
                       className="mt-2 rounded-none"
-                      placeholder="Enter your phone number"
+                      placeholder="Enter your phone"
                     />
                   </div>
 
                   {/* Shipping Address */}
-                  <div className="border-t border-muted-foreground/20 pt-6 mt-8">
+                  <div className="border-t border-border pt-6 mt-6">
                     <h3 className="text-base font-light text-foreground mb-4">Shipping Address</h3>
                     
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="shippingAddress" className="text-sm font-light text-foreground">
-                          Address *
-                        </Label>
+                        <Label htmlFor="shippingAddress" className="text-sm text-foreground">Address *</Label>
                         <Input
                           id="shippingAddress"
                           type="text"
@@ -301,9 +382,7 @@ const Checkout = () => {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="shippingCity" className="text-sm font-light text-foreground">
-                            City *
-                          </Label>
+                          <Label htmlFor="shippingCity" className="text-sm text-foreground">City *</Label>
                           <Input
                             id="shippingCity"
                             type="text"
@@ -314,9 +393,7 @@ const Checkout = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="shippingPostalCode" className="text-sm font-light text-foreground">
-                            Postal Code *
-                          </Label>
+                          <Label htmlFor="shippingPostalCode" className="text-sm text-foreground">Postal Code *</Label>
                           <Input
                             id="shippingPostalCode"
                             type="text"
@@ -329,9 +406,7 @@ const Checkout = () => {
                       </div>
 
                       <div>
-                        <Label htmlFor="shippingCountry" className="text-sm font-light text-foreground">
-                          Country *
-                        </Label>
+                        <Label htmlFor="shippingCountry" className="text-sm text-foreground">Country *</Label>
                         <Input
                           id="shippingCountry"
                           type="text"
@@ -344,47 +419,40 @@ const Checkout = () => {
                     </div>
                   </div>
 
-                  {/* Billing Address Checkbox */}
-                  <div className="border-t border-muted-foreground/20 pt-6 mt-8">
+                  {/* Billing Address Toggle */}
+                  <div className="border-t border-border pt-6">
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="separateBilling"
                         checked={hasSeparateBilling}
                         onCheckedChange={(checked) => setHasSeparateBilling(checked === true)}
                       />
-                      <Label 
-                        htmlFor="separateBilling" 
-                        className="text-sm font-light text-foreground cursor-pointer"
-                      >
-                        Other billing address
+                      <Label htmlFor="separateBilling" className="text-sm text-foreground cursor-pointer">
+                        Use different billing address
                       </Label>
                     </div>
                   </div>
 
-                  {/* Billing Details - shown when checkbox is checked */}
+                  {/* Billing Details */}
                   {hasSeparateBilling && (
                     <div className="space-y-6 pt-4">
                       <h3 className="text-base font-light text-foreground">Billing Details</h3>
                       
                       <div>
-                        <Label htmlFor="billingEmail" className="text-sm font-light text-foreground">
-                          Email Address *
-                        </Label>
+                        <Label htmlFor="billingEmail" className="text-sm text-foreground">Email *</Label>
                         <Input
                           id="billingEmail"
                           type="email"
                           value={billingDetails.email}
                           onChange={(e) => handleBillingDetailsChange("email", e.target.value)}
                           className="mt-2 rounded-none"
-                          placeholder="Enter billing email"
+                          placeholder="Billing email"
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="billingFirstName" className="text-sm font-light text-foreground">
-                            First Name *
-                          </Label>
+                          <Label htmlFor="billingFirstName" className="text-sm text-foreground">First Name *</Label>
                           <Input
                             id="billingFirstName"
                             type="text"
@@ -395,9 +463,7 @@ const Checkout = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="billingLastName" className="text-sm font-light text-foreground">
-                            Last Name *
-                          </Label>
+                          <Label htmlFor="billingLastName" className="text-sm text-foreground">Last Name *</Label>
                           <Input
                             id="billingLastName"
                             type="text"
@@ -410,23 +476,19 @@ const Checkout = () => {
                       </div>
 
                       <div>
-                        <Label htmlFor="billingPhone" className="text-sm font-light text-foreground">
-                          Phone Number
-                        </Label>
+                        <Label htmlFor="billingPhone" className="text-sm text-foreground">Phone</Label>
                         <Input
                           id="billingPhone"
                           type="tel"
                           value={billingDetails.phone}
                           onChange={(e) => handleBillingDetailsChange("phone", e.target.value)}
                           className="mt-2 rounded-none"
-                          placeholder="Enter billing phone number"
+                          placeholder="Billing phone"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="billingAddress" className="text-sm font-light text-foreground">
-                          Address *
-                        </Label>
+                        <Label htmlFor="billingAddress" className="text-sm text-foreground">Address *</Label>
                         <Input
                           id="billingAddress"
                           type="text"
@@ -439,9 +501,7 @@ const Checkout = () => {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="billingCity" className="text-sm font-light text-foreground">
-                            City *
-                          </Label>
+                          <Label htmlFor="billingCity" className="text-sm text-foreground">City *</Label>
                           <Input
                             id="billingCity"
                             type="text"
@@ -452,9 +512,7 @@ const Checkout = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="billingPostalCode" className="text-sm font-light text-foreground">
-                            Postal Code *
-                          </Label>
+                          <Label htmlFor="billingPostalCode" className="text-sm text-foreground">Postal Code *</Label>
                           <Input
                             id="billingPostalCode"
                             type="text"
@@ -467,9 +525,7 @@ const Checkout = () => {
                       </div>
 
                       <div>
-                        <Label htmlFor="billingCountry" className="text-sm font-light text-foreground">
-                          Country *
-                        </Label>
+                        <Label htmlFor="billingCountry" className="text-sm text-foreground">Country *</Label>
                         <Input
                           id="billingCountry"
                           type="text"
@@ -484,269 +540,91 @@ const Checkout = () => {
                 </div>
               </div>
 
-            {/* Shipping Options */}
-            <div className="bg-muted/20 p-8 rounded-none">
-              <h2 className="text-lg font-light text-foreground mb-6">Shipping Options</h2>
-              
-              <RadioGroup 
-                value={shippingOption} 
-                onValueChange={setShippingOption}
-                className="space-y-4"
-              >
-                <div className="flex items-center justify-between p-4 border border-muted-foreground/20 rounded-none">
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value="standard" id="standard" />
-                    <Label htmlFor="standard" className="font-light text-foreground">
-                      Standard Shipping
-                    </Label>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Free • 3-5 business days
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border border-muted-foreground/20 rounded-none">
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value="express" id="express" />
-                    <Label htmlFor="express" className="font-light text-foreground">
-                      Express Shipping
-                    </Label>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    €15 • 1-2 business days
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border border-muted-foreground/20 rounded-none">
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value="overnight" id="overnight" />
-                    <Label htmlFor="overnight" className="font-light text-foreground">
-                      Overnight Delivery
-                    </Label>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    €35 • Next business day
-                  </div>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {/* Payment Section */}
-            <div className="bg-muted/20 p-8 rounded-none">
-              <h2 className="text-lg font-light text-foreground mb-6">Payment Method</h2>
-              
-              {!paymentComplete ? (
-                <div className="space-y-6">
-                  {/* Payment Method Selection */}
-                  <RadioGroup 
-                    value={paymentMethod} 
-                    onValueChange={(value) => setPaymentMethod(value as "card" | "paypal" | "cod")}
-                    className="space-y-4"
-                  >
-                    <div className={`flex items-center justify-between p-4 border rounded-none cursor-pointer transition-colors ${
-                      paymentMethod === "card" ? "border-foreground bg-muted/30" : "border-muted-foreground/20"
-                    }`}>
-                      <div className="flex items-center space-x-3">
-                        <RadioGroupItem value="card" id="card" />
-                        <Label htmlFor="card" className="font-light text-foreground cursor-pointer flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          Credit / Debit Card
-                        </Label>
-                      </div>
-                      <div className="flex gap-2">
-                        <img src="https://img.icons8.com/color/48/visa.png" alt="Visa" className="h-6" />
-                        <img src="https://img.icons8.com/color/48/mastercard.png" alt="Mastercard" className="h-6" />
-                      </div>
+              {/* Shipping Options */}
+              <div className="bg-card p-8 border border-border">
+                <h2 className="text-lg font-light text-foreground mb-6">Shipping Options</h2>
+                
+                <RadioGroup 
+                  value={shippingOption} 
+                  onValueChange={setShippingOption}
+                  className="space-y-4"
+                >
+                  <div className={`flex items-center justify-between p-4 border rounded-none cursor-pointer transition-colors ${
+                    shippingOption === "standard" ? "border-primary bg-primary/5" : "border-border"
+                  }`}>
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="standard" id="standard" />
+                      <Label htmlFor="standard" className="text-foreground cursor-pointer">Standard Shipping</Label>
                     </div>
+                    <div className="text-sm text-muted-foreground">Free • 3-5 days</div>
+                  </div>
 
-                    <div className={`flex items-center justify-between p-4 border rounded-none cursor-pointer transition-colors ${
-                      paymentMethod === "paypal" ? "border-foreground bg-muted/30" : "border-muted-foreground/20"
-                    }`}>
-                      <div className="flex items-center space-x-3">
-                        <RadioGroupItem value="paypal" id="paypal" />
-                        <Label htmlFor="paypal" className="font-light text-foreground cursor-pointer flex items-center gap-2">
-                          <Wallet className="h-4 w-4" />
-                          PayPal
-                        </Label>
-                      </div>
-                      <img src="https://img.icons8.com/color/48/paypal.png" alt="PayPal" className="h-6" />
+                  <div className={`flex items-center justify-between p-4 border rounded-none cursor-pointer transition-colors ${
+                    shippingOption === "express" ? "border-primary bg-primary/5" : "border-border"
+                  }`}>
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="express" id="express" />
+                      <Label htmlFor="express" className="text-foreground cursor-pointer">Express Shipping</Label>
                     </div>
+                    <div className="text-sm text-muted-foreground">€15 • 1-2 days</div>
+                  </div>
 
-                    <div className={`flex items-center justify-between p-4 border rounded-none cursor-pointer transition-colors ${
-                      paymentMethod === "cod" ? "border-foreground bg-muted/30" : "border-muted-foreground/20"
-                    }`}>
-                      <div className="flex items-center space-x-3">
-                        <RadioGroupItem value="cod" id="cod" />
-                        <Label htmlFor="cod" className="font-light text-foreground cursor-pointer flex items-center gap-2">
-                          <Truck className="h-4 w-4" />
-                          Cash on Delivery
-                        </Label>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        +€5 fee
-                      </div>
+                  <div className={`flex items-center justify-between p-4 border rounded-none cursor-pointer transition-colors ${
+                    shippingOption === "overnight" ? "border-primary bg-primary/5" : "border-border"
+                  }`}>
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="overnight" id="overnight" />
+                      <Label htmlFor="overnight" className="text-foreground cursor-pointer">Overnight Delivery</Label>
                     </div>
-                  </RadioGroup>
+                    <div className="text-sm text-muted-foreground">€35 • Next day</div>
+                  </div>
+                </RadioGroup>
+              </div>
 
-                  {/* Card Payment Details */}
-                  {paymentMethod === "card" && (
-                    <div className="space-y-6 pt-4 border-t border-muted-foreground/20">
+              {/* Payment - Cash on Delivery Only */}
+              <div className="bg-card p-8 border border-border">
+                <h2 className="text-lg font-light text-foreground mb-6">Payment Method</h2>
+                
+                {!orderComplete ? (
+                  <div className="space-y-6">
+                    {/* COD Info */}
+                    <div className="flex items-center gap-4 p-4 border border-primary bg-primary/5">
+                      <Truck className="w-6 h-6 text-primary" />
                       <div>
-                        <Label htmlFor="cardholderName" className="text-sm font-light text-foreground">
-                          Cardholder Name *
-                        </Label>
-                        <Input
-                          id="cardholderName"
-                          type="text"
-                          value={paymentDetails.cardholderName}
-                          onChange={(e) => handlePaymentDetailsChange("cardholderName", e.target.value)}
-                          className="mt-2 rounded-none"
-                          placeholder="Name on card"
-                        />
+                        <p className="font-medium text-foreground">Cash on Delivery</p>
+                        <p className="text-sm text-muted-foreground">Pay in cash when your order arrives (+€5 fee)</p>
                       </div>
+                    </div>
 
-                      <div>
-                        <Label htmlFor="cardNumber" className="text-sm font-light text-foreground">
-                          Card Number *
-                        </Label>
-                        <div className="relative mt-2">
-                          <Input
-                            id="cardNumber"
-                            type="text"
-                            value={paymentDetails.cardNumber}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
-                              if (value.length <= 19) {
-                                handlePaymentDetailsChange("cardNumber", value);
-                              }
-                            }}
-                            className="rounded-none pl-10"
-                            placeholder="4242 4242 4242 4242"
-                            maxLength={19}
-                          />
-                          <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </div>
+                    <div className="bg-muted/30 p-4 rounded-none">
+                      <p className="text-sm text-muted-foreground">
+                        Please have the exact amount of <span className="text-primary font-medium">€{total.toLocaleString()}</span> ready when the delivery driver arrives.
+                      </p>
+                    </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="expiryDate" className="text-sm font-light text-foreground">
-                            Expiry Date *
-                          </Label>
-                          <Input
-                            id="expiryDate"
-                            type="text"
-                            value={paymentDetails.expiryDate}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '').replace(/(\d{2})(\d{2})/, '$1/$2');
-                              if (value.length <= 5) {
-                                handlePaymentDetailsChange("expiryDate", value);
-                              }
-                            }}
-                            className="mt-2 rounded-none"
-                            placeholder="MM/YY"
-                            maxLength={5}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cvv" className="text-sm font-light text-foreground">
-                            CVV *
-                          </Label>
-                          <Input
-                            id="cvv"
-                            type="text"
-                            value={paymentDetails.cvv}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              if (value.length <= 3) {
-                                handlePaymentDetailsChange("cvv", value);
-                              }
-                            }}
-                            className="mt-2 rounded-none"
-                            placeholder="123"
-                            maxLength={3}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* PayPal Message */}
-                  {paymentMethod === "paypal" && (
-                    <div className="pt-4 border-t border-muted-foreground/20">
-                      <div className="bg-blue-50 p-4 rounded-none text-center">
-                        <p className="text-sm text-blue-800">
-                          You will be redirected to PayPal to complete your payment securely.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Cash on Delivery Message */}
-                  {paymentMethod === "cod" && (
-                    <div className="pt-4 border-t border-muted-foreground/20">
-                      <div className="bg-amber-50 p-4 rounded-none">
-                        <p className="text-sm text-amber-800 mb-2">
-                          <strong>Cash on Delivery</strong>
-                        </p>
-                        <p className="text-sm text-amber-700">
-                          Pay in cash when your order arrives. A €5 handling fee applies. Please have the exact amount ready for the delivery driver.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Order Total Summary */}
-                  <div className="bg-muted/10 p-6 rounded-none border border-muted-foreground/20 space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="text-foreground">€{subtotal.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span className="text-foreground">
-                        {shipping === 0 ? "Free" : `€${shipping}`}
-                      </span>
-                    </div>
-                    {codFee > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">COD Fee</span>
-                        <span className="text-foreground">€{codFee}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-lg font-medium border-t border-muted-foreground/20 pt-3">
-                      <span className="text-foreground">Total</span>
-                      <span className="text-foreground">€{total.toLocaleString()}</span>
-                    </div>
+                    <Button
+                      onClick={handlePlaceOrder}
+                      disabled={isProcessing}
+                      className="w-full rounded-none h-12 text-base bg-primary hover:bg-primary-hover text-primary-foreground"
+                    >
+                      {isProcessing ? "Processing Order..." : `Place Order • €${total.toLocaleString()}`}
+                    </Button>
                   </div>
-
-                  <Button
-                    onClick={handleCompleteOrder}
-                    disabled={isProcessing || (paymentMethod === "card" && (!paymentDetails.cardNumber || !paymentDetails.expiryDate || !paymentDetails.cvv || !paymentDetails.cardholderName))}
-                    className="w-full rounded-none h-12 text-base"
-                  >
-                    {isProcessing ? "Processing..." : 
-                      paymentMethod === "paypal" ? `Pay with PayPal • €${total.toLocaleString()}` :
-                      paymentMethod === "cod" ? `Place Order (COD) • €${total.toLocaleString()}` :
-                      `Complete Order • €${total.toLocaleString()}`
-                    }
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                    <Check className="h-8 w-8 text-green-600" />
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
+                      <Check className="h-8 w-8 text-green-500" />
+                    </div>
+                    <h3 className="text-xl font-light text-foreground mb-2">Order Placed Successfully!</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Please have €{total.toLocaleString()} ready when your order arrives.
+                    </p>
+                    <Button asChild variant="outline" className="rounded-none">
+                      <Link to="/">Continue Shopping</Link>
+                    </Button>
                   </div>
-                  <h3 className="text-xl font-light text-foreground mb-2">Order Complete!</h3>
-                  <p className="text-muted-foreground">
-                    {paymentMethod === "cod" 
-                      ? "Thank you for your order. Please have €" + total.toLocaleString() + " ready when the delivery arrives."
-                      : "Thank you for your purchase. Your order confirmation has been sent to your email."
-                    }
-                  </p>
-                 </div>
-               )}
-             </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
