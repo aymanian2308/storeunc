@@ -1,66 +1,47 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="w-full bg-foreground text-background pt-12 pb-6 px-6 mt-24">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-12">
-          {/* Brand & Contact */}
+    <footer className="w-full bg-card border-t border-border pt-16 pb-8 px-6 lg:px-12">
+      <div className="container mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+          {/* Brand */}
           <div className="lg:col-span-1">
-            <h3 className="text-2xl font-semibold tracking-tight mb-6">TechCase</h3>
-            <p className="text-sm font-light text-background/70 leading-relaxed mb-6">
-              Premium phones and cases for the modern tech enthusiast
+            <h3 className="text-2xl font-light text-foreground tracking-tight mb-6">
+              Tech<span className="text-primary">Case</span>
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Premium phones and accessories for the discerning tech enthusiast.
             </p>
-            
-            <div className="space-y-3">
-              <a 
-                href="tel:0694784176" 
-                className="flex items-center gap-3 text-sm text-background/80 hover:text-background transition-colors"
-              >
-                <Phone className="w-4 h-4" />
-                <span>0694784176</span>
-              </a>
-              <a 
-                href="mailto:uncacademycode@gmail.com" 
-                className="flex items-center gap-3 text-sm text-background/80 hover:text-background transition-colors"
-              >
-                <Mail className="w-4 h-4" />
-                <span>uncacademycode@gmail.com</span>
-              </a>
-              <div className="flex items-center gap-3 text-sm text-background/80">
-                <MapPin className="w-4 h-4" />
-                <span>San Francisco, CA</span>
-              </div>
-            </div>
           </div>
 
           {/* Shop Links */}
           <div>
-            <h4 className="text-sm font-medium uppercase tracking-wider mb-6">Shop</h4>
-            <ul className="space-y-3">
+            <h4 className="text-xs font-medium text-primary uppercase tracking-widest mb-6">Shop</h4>
+            <ul className="space-y-4">
               <li>
-                <Link to="/category/shop" className="text-sm text-background/70 hover:text-background transition-colors">
+                <Link to="/category/shop" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
                   All Products
                 </Link>
               </li>
               <li>
-                <Link to="/category/phones" className="text-sm text-background/70 hover:text-background transition-colors">
+                <Link to="/category/phones" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
                   Phones
                 </Link>
               </li>
               <li>
-                <Link to="/category/cases" className="text-sm text-background/70 hover:text-background transition-colors">
+                <Link to="/category/cases" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
                   Cases
                 </Link>
               </li>
               <li>
-                <Link to="/category/accessories" className="text-sm text-background/70 hover:text-background transition-colors">
+                <Link to="/category/accessories" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
                   Accessories
                 </Link>
               </li>
               <li>
-                <Link to="/category/chargers" className="text-sm text-background/70 hover:text-background transition-colors">
+                <Link to="/category/chargers" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
                   Chargers
                 </Link>
               </li>
@@ -69,38 +50,59 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-sm font-medium uppercase tracking-wider mb-6">Quick Links</h4>
-            <ul className="space-y-3">
+            <h4 className="text-xs font-medium text-primary uppercase tracking-widest mb-6">Company</h4>
+            <ul className="space-y-4">
               <li>
-                <Link to="/category/new-in" className="text-sm text-background/70 hover:text-background transition-colors">
+                <Link to="/category/new-in" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
                   New Arrivals
                 </Link>
               </li>
               <li>
-                <Link to="/about/our-story" className="text-sm text-background/70 hover:text-background transition-colors">
-                  About Us
+                <Link to="/about/our-story" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
+                  Our Story
                 </Link>
               </li>
               <li>
-                <Link to="/about/customer-care" className="text-sm text-background/70 hover:text-background transition-colors">
+                <Link to="/about/customer-care" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
                   Customer Care
                 </Link>
               </li>
             </ul>
           </div>
+
+          {/* Contact */}
+          <div>
+            <h4 className="text-xs font-medium text-primary uppercase tracking-widest mb-6">Contact</h4>
+            <div className="space-y-4">
+              <a 
+                href="tel:0694784176" 
+                className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors duration-300 group"
+              >
+                <Phone className="w-4 h-4 text-primary" />
+                <span>0694784176</span>
+              </a>
+              <a 
+                href="mailto:uncacademycode@gmail.com" 
+                className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors duration-300 group"
+              >
+                <Mail className="w-4 h-4 text-primary" />
+                <span>uncacademycode@gmail.com</span>
+              </a>
+            </div>
+          </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-background/20 pt-6">
+        <div className="border-t border-border pt-8">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-background/60">
+            <p className="text-xs text-muted-foreground">
               © 2024 TechCase. All rights reserved.
             </p>
-            <div className="flex gap-6">
-              <Link to="/privacy-policy" className="text-xs text-background/60 hover:text-background transition-colors">
+            <div className="flex gap-8">
+              <Link to="/privacy-policy" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">
                 Privacy Policy
               </Link>
-              <Link to="/terms-of-service" className="text-xs text-background/60 hover:text-background transition-colors">
+              <Link to="/terms-of-service" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">
                 Terms of Service
               </Link>
             </div>

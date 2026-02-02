@@ -15,7 +15,6 @@ const Navigation = () => {
   const [isShoppingBagOpen, setIsShoppingBagOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Preload dropdown images for faster display
   useEffect(() => {
     const imagesToPreload = categories
       .filter(cat => cat.image)
@@ -35,7 +34,6 @@ const Navigation = () => {
     "MagSafe Charger"
   ];
   
-  // Build dynamic nav items based on categories from database
   const shopCategories = useMemo(() => {
     return categories.map(cat => cat.name);
   }, [categories]);
@@ -48,26 +46,24 @@ const Navigation = () => {
 
   return (
     <>
-      <nav className="bg-background border-b border-border">
-        <div className="flex items-center justify-between h-16 px-6 max-w-7xl mx-auto">
+      <nav className="bg-background/80 backdrop-blur-xl border-b border-border/50">
+        <div className="flex items-center justify-between h-20 px-6 lg:px-12 container mx-auto">
           {/* Left - Mobile Menu + Desktop Nav */}
-          <div className="flex items-center gap-8">
-            {/* Mobile hamburger */}
+          <div className="flex items-center gap-10">
             <button
-              className="lg:hidden p-1 text-foreground hover:text-foreground/70 transition-colors"
+              className="lg:hidden p-1 text-foreground hover:text-primary transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            {/* Desktop nav links */}
-            <div className="hidden lg:flex items-center gap-6">
+            <div className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
                   to={link.href}
-                  className="text-sm font-medium text-foreground hover:text-foreground/70 transition-colors"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   {link.name}
                 </Link>
@@ -77,13 +73,15 @@ const Navigation = () => {
 
           {/* Center - Logo */}
           <Link to="/" className="absolute left-1/2 transform -translate-x-1/2">
-            <span className="text-xl font-bold tracking-tight text-foreground">TechCase</span>
+            <span className="text-xl font-light tracking-tight text-foreground">
+              Tech<span className="text-primary">Case</span>
+            </span>
           </Link>
 
           {/* Right - Icons */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button 
-              className="p-2 text-foreground hover:text-foreground/70 transition-colors"
+              className="p-3 text-muted-foreground hover:text-foreground transition-colors duration-300"
               aria-label="Search"
               onClick={() => setIsSearchOpen(!isSearchOpen)}
             >
@@ -92,27 +90,27 @@ const Navigation = () => {
             
             <Link 
               to={user ? (isAdmin ? "/admin" : "/profile") : "/auth"}
-              className="hidden sm:flex p-2 text-foreground hover:text-foreground/70 transition-colors"
+              className="hidden sm:flex p-3 text-muted-foreground hover:text-foreground transition-colors duration-300"
               aria-label={user ? "Account" : "Sign in"}
             >
               <User className="w-5 h-5" />
             </Link>
             
             <button 
-              className="hidden sm:flex p-2 text-foreground hover:text-foreground/70 transition-colors"
+              className="hidden sm:flex p-3 text-muted-foreground hover:text-foreground transition-colors duration-300"
               aria-label="Favorites"
             >
               <Heart className="w-5 h-5" />
             </button>
             
             <button 
-              className="p-2 text-foreground hover:text-foreground/70 transition-colors relative"
+              className="p-3 text-muted-foreground hover:text-foreground transition-colors duration-300 relative"
               aria-label="Shopping bag"
               onClick={() => setIsShoppingBagOpen(true)}
             >
               <ShoppingBag className="w-5 h-5" />
               {totalItems > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-foreground text-background text-[10px] font-medium w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-medium w-4 h-4 rounded-full flex items-center justify-center">
                   {totalItems}
                 </span>
               )}
@@ -122,39 +120,41 @@ const Navigation = () => {
 
         {/* Search Overlay */}
         {isSearchOpen && (
-          <div className="absolute top-full left-0 right-0 bg-background border-b border-border z-50 animate-fade-in">
-            <div className="max-w-2xl mx-auto px-6 py-8">
-              <div className="relative mb-6">
-                <div className="flex items-center gap-3 border-b border-foreground pb-3">
-                  <Search className="w-5 h-5 text-foreground/50" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search phones, cases, accessories..."
-                    className="flex-1 bg-transparent text-foreground placeholder:text-foreground/50 outline-none text-base"
-                    autoFocus
-                  />
-                  <button 
-                    onClick={() => setIsSearchOpen(false)}
-                    className="text-foreground/50 hover:text-foreground"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs uppercase tracking-wider text-foreground/50 mb-3">Popular Searches</p>
-                <div className="flex flex-wrap gap-2">
-                  {popularSearches.map((search) => (
-                    <button
-                      key={search}
-                      className="text-sm text-foreground/70 hover:text-foreground py-1.5 px-3 border border-border rounded-full transition-colors hover:border-foreground"
+          <div className="absolute top-full left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border z-50 animate-fade-in">
+            <div className="container mx-auto px-6 lg:px-12 py-10">
+              <div className="max-w-2xl mx-auto">
+                <div className="relative mb-8">
+                  <div className="flex items-center gap-4 border-b border-primary/50 pb-4">
+                    <Search className="w-5 h-5 text-primary" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search phones, cases, accessories..."
+                      className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground outline-none text-lg"
+                      autoFocus
+                    />
+                    <button 
+                      onClick={() => setIsSearchOpen(false)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {search}
+                      <X className="w-5 h-5" />
                     </button>
-                  ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-primary mb-4">Popular Searches</p>
+                  <div className="flex flex-wrap gap-3">
+                    {popularSearches.map((search) => (
+                      <button
+                        key={search}
+                        className="text-sm text-muted-foreground hover:text-foreground py-2 px-4 border border-border hover:border-primary rounded-full transition-all duration-300"
+                      >
+                        {search}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -163,13 +163,13 @@ const Navigation = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 bg-background border-b border-border z-50 animate-fade-in">
-            <div className="px-6 py-6 space-y-6">
+          <div className="lg:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border z-50 animate-fade-in">
+            <div className="px-6 py-8 space-y-6">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
                   to={link.href}
-                  className="block text-lg font-medium text-foreground hover:text-foreground/70 transition-colors"
+                  className="block text-lg text-muted-foreground hover:text-foreground transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.name}
@@ -177,14 +177,14 @@ const Navigation = () => {
               ))}
               
               {shopCategories.length > 0 && (
-                <div className="pt-4 border-t border-border">
-                  <p className="text-xs uppercase tracking-wider text-foreground/50 mb-3">Categories</p>
-                  <div className="space-y-3">
+                <div className="pt-6 border-t border-border">
+                  <p className="text-xs uppercase tracking-widest text-primary mb-4">Categories</p>
+                  <div className="space-y-4">
                     {shopCategories.map((category) => (
                       <Link
                         key={category}
                         to={`/category/${category.toLowerCase()}`}
-                        className="block text-sm text-foreground/70 hover:text-foreground transition-colors"
+                        className="block text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
                         {category}
@@ -194,16 +194,16 @@ const Navigation = () => {
                 </div>
               )}
               
-              <div className="pt-4 border-t border-border flex gap-4">
+              <div className="pt-6 border-t border-border flex gap-6">
                 <Link 
                   to={user ? (isAdmin ? "/admin" : "/profile") : "/auth"}
-                  className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <User className="w-4 h-4" />
                   {user ? "Account" : "Sign In"}
                 </Link>
-                <button className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground">
+                <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
                   <Heart className="w-4 h-4" />
                   Favorites
                 </button>
@@ -213,7 +213,6 @@ const Navigation = () => {
         )}
       </nav>
       
-      {/* Shopping Bag Drawer */}
       <ShoppingBagDrawer 
         isOpen={isShoppingBagOpen}
         onClose={() => setIsShoppingBagOpen(false)}
