@@ -1,40 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
-
-const collections = [
-  {
-    id: 1,
-    title: "Flagship Phones",
-    description: "The latest in smartphone innovation",
-    image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80",
-    href: "/category/phones",
-    size: "large",
-  },
-  {
-    id: 2,
-    title: "Premium Cases",
-    description: "Elegant protection",
-    image: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=800&q=80",
-    href: "/category/cases",
-    size: "small",
-  },
-  {
-    id: 3,
-    title: "Accessories",
-    description: "Complete your setup",
-    image: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=800&q=80",
-    href: "/category/accessories",
-    size: "small",
-  },
-  {
-    id: 4,
-    title: "Chargers & Power",
-    description: "Fast & wireless charging",
-    image: "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=800&q=80",
-    href: "/category/chargers",
-    size: "large",
-  },
-];
+import { useCollections } from "@/hooks/useCollections";
 
 const CollectionCard = ({ 
   title, 
@@ -84,6 +50,39 @@ const CollectionCard = ({
 );
 
 const FeaturedCollections = () => {
+  const { data: collections, isLoading } = useCollections();
+
+  if (isLoading) {
+    return (
+      <section className="py-24 px-6 lg:px-12 bg-background">
+        <div className="container mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-16">
+            <div>
+              <p className="text-primary text-sm font-medium tracking-widest uppercase mb-4">
+                Explore
+              </p>
+              <h2 className="text-4xl md:text-5xl font-light text-foreground">
+                Featured Collections
+              </h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div 
+                key={i} 
+                className={`bg-muted animate-pulse ${i === 1 || i === 4 ? 'md:col-span-2 aspect-[2/1]' : 'aspect-square'}`} 
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!collections || collections.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-24 px-6 lg:px-12 bg-background">
       <div className="container mx-auto">
@@ -109,7 +108,14 @@ const FeaturedCollections = () => {
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {collections.map((collection) => (
-            <CollectionCard key={collection.id} {...collection} />
+            <CollectionCard 
+              key={collection.id} 
+              title={collection.name}
+              description={collection.description || ""}
+              image={collection.image_url || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80"}
+              href={collection.href}
+              size={collection.size}
+            />
           ))}
         </div>
       </div>

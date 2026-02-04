@@ -6,6 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -34,6 +41,7 @@ import {
 import { Plus, Pencil, Trash2, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCollections } from "@/hooks/useCollections";
 
 interface Product {
   id: string;
@@ -41,6 +49,7 @@ interface Product {
   description: string | null;
   price: number;
   category: string | null;
+  collection_id: string | null;
   image_url: string | null;
   image_urls: string[] | null;
   material: string | null;
@@ -53,6 +62,7 @@ interface ProductFormData {
   description: string;
   price: string;
   category: string;
+  collection_id: string;
   image_urls: string[];
   material: string;
   in_stock: boolean;
@@ -63,6 +73,7 @@ const emptyForm: ProductFormData = {
   description: "",
   price: "",
   category: "",
+  collection_id: "",
   image_urls: [],
   material: "",
   in_stock: true,
@@ -78,6 +89,7 @@ export default function AdminProducts() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { data: collections } = useCollections();
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
@@ -114,6 +126,7 @@ export default function AdminProducts() {
       description: product.description || "",
       price: product.price.toString(),
       category: product.category || "",
+      collection_id: product.collection_id || "",
       image_urls: product.image_urls || (product.image_url ? [product.image_url] : []),
       material: product.material || "",
       in_stock: product.in_stock,
@@ -208,6 +221,7 @@ export default function AdminProducts() {
       description: formData.description.trim() || null,
       price: parseFloat(formData.price) || 0,
       category: formData.category.trim() || null,
+      collection_id: formData.collection_id || null,
       image_urls: formData.image_urls,
       image_url: formData.image_urls[0] || null, // Keep first image as primary for backwards compatibility
       material: formData.material.trim() || null,
@@ -420,6 +434,28 @@ export default function AdminProducts() {
                       className="rounded-none"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="collection">Collection</Label>
+                  <Select
+                    value={formData.collection_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, collection_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger className="rounded-none">
+                      <SelectValue placeholder="Select a collection" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No collection</SelectItem>
+                      {collections?.map((collection) => (
+                        <SelectItem key={collection.id} value={collection.id}>
+                          {collection.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
