@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      collections: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          href: string
+          id: string
+          image_url: string | null
+          name: string
+          size: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          href: string
+          id?: string
+          image_url?: string | null
+          name: string
+          size?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          href?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          size?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -92,6 +128,7 @@ export type Database = {
       products: {
         Row: {
           category: string | null
+          collection_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -105,6 +142,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          collection_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -118,6 +156,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          collection_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -129,7 +168,15 @@ export type Database = {
           price?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
