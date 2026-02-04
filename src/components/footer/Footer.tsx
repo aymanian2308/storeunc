@@ -18,7 +18,7 @@ const Footer = () => {
 
           {/* Shop Links */}
           <div>
-            <h4 className="text-xs font-medium text-primary uppercase tracking-widest mb-6">Shop</h4>
+            <h4 className="text-xs font-medium text-foreground uppercase tracking-widest mb-6">Shop</h4>
             <ul className="space-y-4">
               <li>
                 <Link to="/category/shop" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
@@ -50,7 +50,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-xs font-medium text-primary uppercase tracking-widest mb-6">Company</h4>
+            <h4 className="text-xs font-medium text-foreground uppercase tracking-widest mb-6">Company</h4>
             <ul className="space-y-4">
               <li>
                 <Link to="/category/new-in" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
@@ -58,13 +58,8 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/about/our-story" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
-                  Our Story
-                </Link>
-              </li>
-              <li>
-                <Link to="/about/customer-care" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
-                  Customer Care
+                <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300">
+                  About Us
                 </Link>
               </li>
             </ul>
@@ -72,7 +67,7 @@ const Footer = () => {
 
           {/* Contact */}
           <div>
-            <h4 className="text-xs font-medium text-primary uppercase tracking-widest mb-6">Contact</h4>
+            <h4 className="text-xs font-medium text-foreground uppercase tracking-widest mb-6">Contact</h4>
             <div className="space-y-4">
               <a 
                 href="tel:0694784176" 
