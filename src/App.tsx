@@ -18,6 +18,7 @@ import TermsOfService from "./pages/TermsOfService";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCollections from "./pages/admin/AdminCollections";
 import AdminProducts from "./pages/admin/AdminProducts";
+import AdminOrders from "./pages/admin/AdminOrders";
 import AdminUsers from "./pages/admin/AdminUsers";
 import Profile from "./pages/Profile";
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/collections" element={<AdminCollections />} />
               <Route path="/admin/products" element={<AdminProducts />} />
+              <Route path="/admin/orders" element={<AdminOrders />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
