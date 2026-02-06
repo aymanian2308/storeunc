@@ -1,0 +1,268 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { Eye } from "lucide-react";
+
+type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+
+const statusColors: Record<OrderStatus, string> = {
+  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  processing: "bg-blue-100 text-blue-800 border-blue-200",
+  shipped: "bg-purple-100 text-purple-800 border-purple-200",
+  delivered: "bg-green-100 text-green-800 border-green-200",
+  cancelled: "bg-red-100 text-red-800 border-red-200",
+};
+
+interface OrderItem {
+  id: string;
+  product_name: string;
+  product_price: number;
+  quantity: number;
+}
+
+interface Order {
+  id: string;
+  user_id: string;
+  status: string;
+  total: number;
+  shipping_address: Record<string, string> | null;
+  created_at: string;
+  order_items: OrderItem[];
+  profiles: { email: string; full_name: string | null } | null;
+}
+
+export default function AdminOrders() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const { data: orders, isLoading } = useQuery({
+    queryKey: ["admin-orders"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select(`
+          *,
+          order_items (*),
+          profiles!orders_user_id_fkey (email, full_name)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as unknown as Order[];
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      toast({ title: "Order status updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  };
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-light tracking-wide">Orders</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage customer orders
+          </p>
+        </div>
+
+        {isLoading ? (
+          <div className="text-muted-foreground">Loading orders...</div>
+        ) : orders?.length === 0 ? (
+          <div className="text-muted-foreground">No orders yet</div>
+        ) : (
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders?.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-mono text-xs">
+                      {order.id.slice(0, 8)}...
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">
+                          {order.profiles?.full_name || "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {order.profiles?.email || "Unknown"}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(order.created_at), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>{formatCurrency(order.total)}</TableCell>
+                    <TableCell>
+                      <Select
+                        value={order.status}
+                        onValueChange={(value) =>
+                          updateStatusMutation.mutate({ id: order.id, status: value })
+                        }
+                      >
+                        <SelectTrigger className="w-[130px] h-8">
+                          <Badge
+                            variant="outline"
+                            className={statusColors[order.status as OrderStatus] || ""}
+                          >
+                            {order.status}
+                          </Badge>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="processing">Processing</SelectItem>
+                          <SelectItem value="shipped">Shipped</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedOrder(order)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Order Details</DialogTitle>
+            </DialogHeader>
+            {selectedOrder && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Order ID:</span>
+                    <p className="font-mono">{selectedOrder.id}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Date:</span>
+                    <p>{format(new Date(selectedOrder.created_at), "PPP")}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Customer:</span>
+                    <p>{selectedOrder.profiles?.full_name || "—"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedOrder.profiles?.email}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge
+                      variant="outline"
+                      className={statusColors[selectedOrder.status as OrderStatus] || ""}
+                    >
+                      {selectedOrder.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                {selectedOrder.shipping_address && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Shipping Address:</span>
+                    <p>
+                      {selectedOrder.shipping_address.street}<br />
+                      {selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} {selectedOrder.shipping_address.zip}<br />
+                      {selectedOrder.shipping_address.country}
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <span className="text-sm text-muted-foreground">Items:</span>
+                  <div className="mt-2 space-y-2">
+                    {selectedOrder.order_items?.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between text-sm border-b pb-2"
+                      >
+                        <div>
+                          <span>{item.product_name}</span>
+                          <span className="text-muted-foreground ml-2">
+                            × {item.quantity}
+                          </span>
+                        </div>
+                        <span>{formatCurrency(item.product_price * item.quantity)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between font-medium mt-3">
+                    <span>Total</span>
+                    <span>{formatCurrency(selectedOrder.total)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AdminLayout>
+  );
+}
