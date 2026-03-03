@@ -26,8 +26,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { Eye } from "lucide-react";
+import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { Eye, Search, CalendarIcon, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
 
@@ -61,6 +69,10 @@ export default function AdminOrders() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
@@ -108,12 +120,30 @@ export default function AdminOrders() {
     },
   });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+
+  const filteredOrders = orders?.filter((order) => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q || 
+      order.id.toLowerCase().includes(q) ||
+      order.profiles?.full_name?.toLowerCase().includes(q) ||
+      order.profiles?.email?.toLowerCase().includes(q);
+    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    const orderDate = new Date(order.created_at);
+    const matchesFrom = !dateFrom || !isBefore(orderDate, startOfDay(dateFrom));
+    const matchesTo = !dateTo || !isAfter(orderDate, endOfDay(dateTo));
+    return matchesSearch && matchesStatus && matchesFrom && matchesTo;
+  });
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setDateFrom(undefined);
+    setDateTo(undefined);
   };
+
+  const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFrom || dateTo;
 
   return (
     <AdminLayout>
@@ -125,10 +155,63 @@ export default function AdminOrders() {
           </p>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, email, or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="processing">Processing</SelectItem>
+              <SelectItem value="shipped">Shipped</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateTo ? format(dateTo, "MMM d, yyyy") : "To"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="h-4 w-4 mr-1" /> Clear
+            </Button>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="text-muted-foreground">Loading orders...</div>
-        ) : orders?.length === 0 ? (
-          <div className="text-muted-foreground">No orders yet</div>
+        ) : filteredOrders?.length === 0 ? (
+          <div className="text-muted-foreground">{orders?.length ? "No orders match your filters" : "No orders yet"}</div>
         ) : (
           <div className="border rounded-lg">
             <Table>
@@ -143,7 +226,7 @@ export default function AdminOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders?.map((order) => (
+                {filteredOrders?.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-mono text-xs">
                       {order.id.slice(0, 8)}...
