@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
-import { Eye, Search, CalendarIcon, X, Download } from "lucide-react";
+import { Eye, Search, CalendarIcon, X, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -73,6 +73,8 @@ export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
@@ -141,9 +143,16 @@ export default function AdminOrders() {
     setStatusFilter("all");
     setDateFrom(undefined);
     setDateTo(undefined);
+    setCurrentPage(1);
   };
 
   const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFrom || dateTo;
+
+  // Reset page when filters change
+  const totalFiltered = filteredOrders?.length || 0;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedOrders = filteredOrders?.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const exportToCSV = () => {
     if (!filteredOrders?.length) return;
@@ -183,11 +192,11 @@ export default function AdminOrders() {
             <Input
               placeholder="Search by name, email, or ID..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -250,7 +259,7 @@ export default function AdminOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders?.map((order) => (
+                {paginatedOrders?.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-mono text-xs">
                       {order.id.slice(0, 8)}...
@@ -305,7 +314,23 @@ export default function AdminOrders() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+           </Table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between p-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, totalFiltered)} of {totalFiltered} orders
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={safePage <= 1} onClick={() => setCurrentPage(safePage - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm">Page {safePage} of {totalPages}</span>
+                  <Button variant="outline" size="sm" disabled={safePage >= totalPages} onClick={() => setCurrentPage(safePage + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
