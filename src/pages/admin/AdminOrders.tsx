@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
-import { Eye, Search, CalendarIcon, X } from "lucide-react";
+import { Eye, Search, CalendarIcon, X, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -145,6 +145,27 @@ export default function AdminOrders() {
 
   const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFrom || dateTo;
 
+  const exportToCSV = () => {
+    if (!filteredOrders?.length) return;
+    const headers = ["Order ID", "Customer Name", "Email", "Date", "Total", "Status"];
+    const rows = filteredOrders.map((o) => [
+      o.id,
+      o.profiles?.full_name || "",
+      o.profiles?.email || "",
+      format(new Date(o.created_at), "yyyy-MM-dd"),
+      o.total.toFixed(2),
+      o.status,
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `orders-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -206,6 +227,9 @@ export default function AdminOrders() {
               <X className="h-4 w-4 mr-1" /> Clear
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={exportToCSV} disabled={!filteredOrders?.length}>
+            <Download className="h-4 w-4 mr-1" /> Export CSV
+          </Button>
         </div>
 
         {isLoading ? (
