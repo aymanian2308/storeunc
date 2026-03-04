@@ -12,8 +12,8 @@ const Index = () => {
       
       <main>
         <HeroCarousel />
-        <FeaturedCollections />
         <ProductShowcase />
+        <FeaturedCollections />
         <BrandStatement />
       </main>
       

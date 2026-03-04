@@ -1,4 +1,4 @@
-import { Package, Users, LayoutDashboard, LogOut, Home, FolderOpen, ShoppingCart } from "lucide-react";
+import { Package, Users, LayoutDashboard, LogOut, Home, FolderOpen, ShoppingCart, Image } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+  { title: "Hero Slides", url: "/admin/hero-slides", icon: Image },
   { title: "Collections", url: "/admin/collections", icon: FolderOpen },
   { title: "Products", url: "/admin/products", icon: Package },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
