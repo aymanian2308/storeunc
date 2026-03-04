@@ -4,6 +4,7 @@ import HeroCarousel from "../components/content/HeroCarousel";
 import FeaturedCollections from "../components/content/FeaturedCollections";
 import ProductShowcase from "../components/content/ProductShowcase";
 import BrandStatement from "../components/content/BrandStatement";
+import PromoBanner from "../components/content/PromoBanner";
 
 const Index = () => {
   return (
@@ -12,6 +13,7 @@ const Index = () => {
       
       <main>
         <HeroCarousel />
+        <PromoBanner />
         <ProductShowcase />
         <FeaturedCollections />
         <BrandStatement />
